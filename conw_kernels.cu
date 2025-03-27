@@ -33,7 +33,7 @@ void shared_Conways(unsigned char *d_in, unsigned char *d_out, const int rows, c
 }
 
 
-void par_conway(unsigned char * d_gameboard, uchar4 *d_in_img, uchar4 *d_out_img, size_t rows, size_t cols, size_t phases){
+void par_conway(unsigned char * d_gameboard, unsigned char *d_in_img, unsigned char *d_out_img, size_t rows, size_t cols, size_t phases){
  
         // Defines number of blocks needed for data size
         dim3 gridSize((cols-1)/BLOCK+1, (rows-1)/BLOCK+1,1);

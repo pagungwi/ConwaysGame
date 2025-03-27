@@ -189,4 +189,5 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
     int * temp = (int *)malloc(2*sizeof(int));
     temp[0] = i;
     temp[1] = j;
+    return temp;
 }
