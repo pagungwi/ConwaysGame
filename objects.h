@@ -56,7 +56,7 @@ unsigned char r_hw_ship[5][7] = {{255,0,0,0,0,0,0}, {0,255,255,255,255,255,0}, {
 unsigned char l_hw_ship[5][7] = {{255,255,255,0,0,255,255}, {255,0,255,255,255,255,0}, {0,255,255,255,255,255,255}, {0,255,255,255,255,255,0}, {0,0,0,0,0,0,255}}; // moves right to left (5x7)
 
 /* Takes 2D input array (image), object selected, rows and cols of array, placement x and y locations in array */
-int * placeObject(unsigned char * input, int object, int rows, int cols, int x, int y)
+int * placeObject(uchar4 * input, int object, int rows, int cols, int x, int y)
 {
     int i, j;
     switch(object) {
@@ -64,7 +64,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 2; i++) {
                 for(j= 0; j < 2; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = block[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(block[i][j], block[i][j], block[i][j], 255);
                     }
                 }
             }
@@ -73,7 +73,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 3; i++) {
                 for(j= 0; j < 4; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = bee_hive[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(bee_hive[i][j], bee_hive[i][j], bee_hive[i][j], 255);
                     }
                 }
             }
@@ -82,7 +82,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 4; i++) {
                 for(j= 0; j < 4; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = loaf[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(loaf[i][j], loaf[i][j], loaf[i][j], 255);
                     }
                 }
             }
@@ -91,7 +91,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 3; i++) {
                 for(j= 0; j < 3; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = boat[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(boat[i][j], boat[i][j], boat[i][j], 255);
                     }
                 }
             }
@@ -100,7 +100,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 3; i++) {
                 for(j= 0; j < 3; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = tub[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(tub[i][j], tub[i][j], tub[i][j], 255);
                     }
                 }
             }
@@ -109,7 +109,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 4; i++) {
                 for(j= 0; j < 4; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = beacon[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(beacon[i][j], beacon[i][j], beacon[i][j], 255);
                     }
                 }
             }
@@ -118,7 +118,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 16; i++) {
                 for(j= 0; j < 9; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = penta[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(penta[i][j], penta[i][j], penta[i][j], 255);
                     }
                 }
             }
@@ -127,7 +127,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 15; i++) {
                 for(j= 0; j < 15; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = pulsar[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(pulsar[i][j], pulsar[i][j], pulsar[i][j], 255);
                     }
                 }
             }
@@ -136,7 +136,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 3; i++) {
                 for(j= 0; j < 3; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = r_glider[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(r_glider[i][j], r_glider[i][j], r_glider[i][j], 255);
                     }
                 }
             }
@@ -145,7 +145,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 3; i++) {
                 for(j= 0; j < 3; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = l_glider[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(l_glider[i][j], l_glider[i][j], l_glider[i][j], 255);
                     }
                 }
             }
@@ -154,7 +154,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 4; i++) {
                 for(j= 0; j < 5; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = lw_ship[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(lw_ship[i][j], lw_ship[i][j], lw_ship[i][j], 255);
                     }
                 }
             }
@@ -163,7 +163,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 5; i++) {
                 for(j= 0; j < 6; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = mw_ship[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(mw_ship[i][j], mw_ship[i][j], mw_ship[i][j], 255);
                     }
                 }
             }
@@ -172,7 +172,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 5; i++) {
                 for(j= 0; j < 7; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = l_hw_ship[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(l_hw_ship[i][j], l_hw_ship[i][j], l_hw_ship[i][j], 255);
                     }
                 }
             }
@@ -180,7 +180,7 @@ int * placeObject(unsigned char * input, int object, int rows, int cols, int x, 
             for(i = 0; i < 5; i++) {
                 for(j= 0; j < 7; j++) {
                     if(i+y < rows && j+x < cols) {
-                        input[(i+y)*cols+(j+x)] = r_hw_ship[i][j];
+                        input[(i+y)*cols+(j+x)] = make_uchar4(r_hw_ship[i][j], r_hw_ship[i][j], r_hw_ship[i][j], 255);
                     }
                 }
             }

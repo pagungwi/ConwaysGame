@@ -63,24 +63,23 @@ void checkResult(const std::string &reference_file, const std::string &output_fi
   the last argument being the transperency value. 
  */
 
-void createRandomInitialState(unsigned char * gameboard, int rows, int cols)
+void createRandomInitialState(uchar4 * gameboard, int rows, int cols)
 {
     int i = 0;
     int j = 0;
-    gameboard = (unsigned char *)malloc(rows*cols*sizeof(unsigned char));
     int objNum; // Start in top left corner of gameboard
     int * temp;
     // Use modulus and rand numbers to move and place randomized objects (0-13)
-    while(i < rows) {
-        int max_i = 3; // minimum object size
-        while(j < cols) {
-            srand(time(0));
+    srand(time(0));
+    for(i = 0; i < rows; i++) {
+        int max_i = 0; // minimum object size
+        for(j=0; j < cols; j++) {
             objNum = (rand() % 13) + 1;
             temp = placeObject(gameboard, objNum, rows, cols, i, j);
-            j = temp[1] + 5;
+            j += temp[1]+2;
             if(temp[0] > max_i) {max_i = temp[0];}
         } 
-        i += max_i;
+        i += max_i + 2;
     }
 }
 
@@ -94,7 +93,7 @@ void createInitialState(unsigned char * gameboard, int rows, int cols)
 /*
 Kernel for running Conway's Game of Life Serially for x phases/iterations
  */
-void serialConways(unsigned char *in, unsigned char *out, const int rows, const int cols){
+void serialConways(uchar4 *in, uchar4 *out, const int rows, const int cols){
     
     // Use gaussian_blur_filter function and Lecture3.1 Parallelism Slides to build out for-loops
 
@@ -103,10 +102,10 @@ void serialConways(unsigned char *in, unsigned char *out, const int rows, const 
 /*
 Kernel that creates visible image for effectively viewing Conway's game (make single value in array map to 5x5 block of pixels)
 */
-void serialCreateImage(unsigned char *in, const int rows, const int cols, std::string name)
+void serialCreateImage(uchar4 *in, const int rows, const int cols, std::string name)
 {
     // CV_8UC1 = 8-bit unsigned single channel
-    cv::Mat output(rows, cols, CV_8UC1, (void*)in); // generate image
+    cv::Mat output(rows, cols, CV_8UC4, (void*)in); // generate image
     bool suc = cv::imwrite(name.c_str(), output);
     if(!suc){
         std::cerr << "Couldn't write GPU image!\n";
@@ -147,10 +146,13 @@ int main(int argc, char const *argv[]) {
         512 x 4096
         8192 x 1024
     */
-    unsigned char * gameboard1;
-    unsigned char * gameboard2;
-    unsigned char * gameboard3;
-    unsigned char * gameboard4; unsigned char * gameboard5;
+
+    const size_t  numPixels = game_rows*game_cols;
+
+    uchar4 * gameboard;
+    gameboard = (uchar4 *)malloc(numPixels*sizeof(uchar4));
+    uchar4 def = make_uchar4(255, 255, 255, 255);
+    memset(gameboard, 255, numPixels*sizeof(uchar4));
     /*
     createInitialState(gameboard1, 512, 512);
     createInitialState(gameboard2, 2048, 2048);
@@ -163,48 +165,50 @@ int main(int argc, char const *argv[]) {
         512 x 4096
         8192 x 1024
     */
-    createRandomInitialState(gameboard5, game_rows, game_cols);
+    createRandomInitialState(gameboard, game_rows, game_cols);
 
-    const size_t  numPixels = game_rows*game_cols;
+    
     /* Print array could be useful for ensuring Conway's game looks correct */
     /*
     std::cout << "Gaussian Filter Array: \n";
     printArray<float>(gameboard5, numPixels); // printUtility. 
     std::cout << "\n";
     */
-    unsigned char *h_in_board, *h_o_board; // pointers to the actual image input and output pointers  
-    unsigned char *d_in_board, *d_o_board;
-    unsigned char *r_in_board, *r_o_board; // reference serial output image
+    uchar4 *h_in_board, *h_o_board; // pointers to the actual image input and output pointers  
+    uchar4 *d_in_board, *d_o_board;
+    uchar4 *r_in_board, *r_o_board; // reference serial output image
 
     cv::Mat i_img, o_img; 
 
     // Names of parallel files
-    std::string infile; 
-    std::string outfile;
+    std::string infile = "parallel_initial.bmp"; 
+    std::string outfile = "parallel_final.bmp";
 
     // Names of serial files
-    std::string i_reference;
-    std::string o_reference;
+    std::string i_reference = "serial_initial.bmp";
+    std::string o_reference = "serial_final.bmp";
 
     i_img.create(game_rows, game_cols, CV_8UC1);
-    h_in_board = i_img.ptr<unsigned char>(0); // pointer to output image
-    r_in_board = i_img.ptr<unsigned char>(0); // pointer to reference serial output image
-    serialCreateImage(gameboard5, game_rows, game_cols, i_reference);
+    h_in_board = i_img.ptr<uchar4>(0); // pointer to output image
+    r_in_board = i_img.ptr<uchar4>(0); // pointer to reference serial output image
+    serialCreateImage(gameboard, game_rows, game_cols, i_reference);
 
+    checkCudaErrors(cudaMalloc((void**)&h_in_board, sizeof(uchar4)*numPixels));
+    checkCudaErrors(cudaMalloc((void**)&h_o_board, sizeof(uchar4)*numPixels));
     // allocate the memories for the device pointers  
-    checkCudaErrors(cudaMalloc((void**)&d_in_board, sizeof(unsigned char)*numPixels));
-    checkCudaErrors(cudaMalloc((void**)&d_o_board, sizeof(unsigned char)*numPixels));
+    checkCudaErrors(cudaMalloc((void**)&d_in_board, sizeof(uchar4)*numPixels));
+    checkCudaErrors(cudaMalloc((void**)&d_o_board, sizeof(uchar4)*numPixels));
 
     // copy the image and filter over to GPU here 
-    checkCudaErrors(cudaMemcpy(d_in_board, h_in_board, sizeof(unsigned char)*numPixels, cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy(d_in_board, h_in_board, sizeof(uchar4)*numPixels, cudaMemcpyHostToDevice));
 
     // kernel launch code 
-    par_conway(gameboard5, d_in_board, d_o_board, game_rows, game_cols, game_phases); // Select what gameBoard version we want to test
+    par_conway(gameboard, d_in_board, d_o_board, game_rows, game_cols, game_phases); // Select what gameBoard version we want to test
     cudaDeviceSynchronize();
     checkCudaErrors(cudaGetLastError());
 
     // memcpy the output image to the host side.
-    checkCudaErrors(cudaMemcpy(h_o_board, d_o_board, numPixels*sizeof(unsigned char), cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(h_o_board, d_o_board, numPixels*sizeof(uchar4), cudaMemcpyDeviceToHost));
 
     // perform serial memory allocation and function calls, final output should be stored in *r_o_img
     //  ** there are many ways to perform timing in c++ such as std::chrono **
@@ -242,6 +246,7 @@ int main(int argc, char const *argv[]) {
     // free any necessary memory.
     cudaFree(d_in_board);
     cudaFree(d_o_board);
+    free(gameboard);
     // free gameboards?
 
     return 0;
