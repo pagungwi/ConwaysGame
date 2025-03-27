@@ -75,7 +75,7 @@ void createRandomInitialState(uchar4 * gameboard, int rows, int cols)
         int max_i = 0; // minimum object size
         for(j=0; j < cols; j++) {
             objNum = (rand() % 13) + 1;
-            temp = placeObject(gameboard, objNum, rows, cols, i, j);
+            temp = placeObject(gameboard, objNum, rows, cols, j, i);
             j += temp[1]+2;
             if(temp[0] > max_i) {max_i = temp[0];}
         } 
