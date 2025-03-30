@@ -84,19 +84,54 @@ void createRandomInitialState(uchar4 * gameboard, int rows, int cols)
 }
 
 /*
-void createInitialState(unsigned char * gameboard, int rows, int cols)
-{
-    gameboard = (unsigned char *)malloc(rows*cols*sizeof(unsigned char));
-}
-*/
-
-/*
 Kernel for running Conway's Game of Life Serially for x phases/iterations
  */
-void serialConways(uchar4 *in, uchar4 *out, const int rows, const int cols){
-    
-    // Use gaussian_blur_filter function and Lecture3.1 Parallelism Slides to build out for-loops
+void serialConways(uchar4 *in, const int rows, const int cols, const int phases)
+{
+    for(int p = 0; p < phases; p++) {
+        uchar4 * temp = (uchar4 *)malloc(rows*cols*sizeof(uchar4));
+        for(int r = 0; r < rows; r++) {
+            for(int c = 0; c < cols; c++) {
+                int count = 0;
+                // Neighbor positions
+                int top_l = r*cols+c - 1 - cols;
+                int top_m = r*cols+c - cols;
+                int top_r = r*cols+c + 1 - cols;
+                int mid_l = r*cols+c - 1;
+                int mid_r = r*cols+c + 1;
+                int bot_l = r*cols+c - 1 + cols;
+                int bot_m = r*cols+c + cols;
+                int bot_r = r*cols+c + cols + 1;
+                // Check if neighbors alive or dead, add to alive count
+                if(c != 0) // Need to check if on left wall of image
+                {
+                    if(top_l < rows*cols && top_l > -1 && in[top_l].x == 0) { count++; } // top left neighbor
+                    if(mid_l < rows*cols && mid_l > -1 && in[mid_l].x == 0) { count++; } // mid left neigbor
+                    if(bot_l < rows*cols && bot_l > -1 && in[bot_l].x == 0) { count++; } // bottom left neighbor
+                }
+                if(c != cols-1) // Need to check if on right wall of image
+                {   
+                    if(top_r < rows*cols && top_r > -1 && in[top_r].x == 0) { count++; } // top right neighbor
+                    if(mid_r < rows*cols && mid_r > -1 && in[mid_r].x == 0) { count++; } // middle right neighbor
+                    if(bot_r < rows*cols && bot_r > -1 && in[bot_r].x == 0) { count++; }// bottom right neighbor
+                }
+                if(top_m < rows*cols && top_m > -1 && in[top_m].x == 0) { count++; } // top middle neighbor
+                if(bot_m < rows*cols && bot_m > -1 && in[bot_m].x == 0) { count++; } // bottom middle neighbor
 
+                // Update temp board based on counts
+                if(in[r*cols+c].x == 0 && (count < 2 || count > 3)) {temp[r*cols+c] = make_uchar4(255,255,255,255);} // if alive, make dead
+                else if(in[r*cols+c].x == 0 && (count == 2 || count == 3)) {temp[r*cols+c] = make_uchar4(0,0,0,255);} // if alive, stay alive
+                else if(in[r*cols+c].x == 255 && (count == 3)) {temp[r*cols+c] = make_uchar4(0,0,0,255);} // if dead, make alive
+                else {temp[r*cols+c] = make_uchar4(255,255,255,255);} // if dead, stay dead
+            }
+        }
+        for(int r = 0; r < rows; r++) {
+            for(int c = 0; c < cols; c++) {
+                in[r*cols+c] = temp[r*cols+c];
+            }
+        }
+        free(temp);
+    }
 }
 
 /*
@@ -153,12 +188,7 @@ int main(int argc, char const *argv[]) {
     gameboard = (uchar4 *)malloc(numPixels*sizeof(uchar4));
     uchar4 def = make_uchar4(255, 255, 255, 255);
     memset(gameboard, 255, numPixels*sizeof(uchar4));
-    /*
-    createInitialState(gameboard1, 512, 512);
-    createInitialState(gameboard2, 2048, 2048);
-    createInitialState(gameboard3, 512, 4096);
-    createInitialState(gameboard4, 8192, 1024);
-    */
+
     /* Create randomized initial states using user-input sizes:
         512 x 512
         2048 x 2048
@@ -167,13 +197,6 @@ int main(int argc, char const *argv[]) {
     */
     createRandomInitialState(gameboard, game_rows, game_cols);
 
-    
-    /* Print array could be useful for ensuring Conway's game looks correct */
-    /*
-    std::cout << "Gaussian Filter Array: \n";
-    printArray<float>(gameboard5, numPixels); // printUtility. 
-    std::cout << "\n";
-    */
     uchar4 *h_in_board, *h_o_board; // pointers to the actual image input and output pointers  
     uchar4 *d_in_board, *d_o_board;
     uchar4 *r_in_board, *r_o_board; // reference serial output image
@@ -191,7 +214,32 @@ int main(int argc, char const *argv[]) {
     i_img.create(game_rows, game_cols, CV_8UC1);
     h_in_board = i_img.ptr<uchar4>(0); // pointer to output image
     r_in_board = i_img.ptr<uchar4>(0); // pointer to reference serial output image
+
+    std::chrono::time_point<std::chrono::system_clock> start, end;
+    std::chrono::duration<double> elapsed_time;
+
+    std::cout << "Serial Kernel Execution Times:\n";
+
+    std::cout << "Serial Image Creation - Initial Board: ";
+    start = std::chrono::system_clock::now();
     serialCreateImage(gameboard, game_rows, game_cols, i_reference);
+    end = std::chrono::system_clock::now();
+    elapsed_time = end-start;
+    std::cout << elapsed_time.count() << "s\n";
+
+    std::cout << "Serial Conways: ";
+    start = std::chrono::system_clock::now();
+    serialConways(gameboard, game_rows, game_cols, game_phases);
+    end = std::chrono::system_clock::now();
+    elapsed_time = end-start;
+    std::cout << elapsed_time.count() << "s\n";
+
+    std::cout << "Serial Image Creation - Final Board: ";
+    start = std::chrono::system_clock::now();
+    serialCreateImage(gameboard, game_rows, game_cols, o_reference);
+    end = std::chrono::system_clock::now();
+    elapsed_time = end-start;
+    std::cout << elapsed_time.count() << "s\n";
 
     checkCudaErrors(cudaMalloc((void**)&h_in_board, sizeof(uchar4)*numPixels));
     checkCudaErrors(cudaMalloc((void**)&h_o_board, sizeof(uchar4)*numPixels));
@@ -209,14 +257,6 @@ int main(int argc, char const *argv[]) {
 
     // memcpy the output image to the host side.
     checkCudaErrors(cudaMemcpy(h_o_board, d_o_board, numPixels*sizeof(uchar4), cudaMemcpyDeviceToHost));
-
-    // perform serial memory allocation and function calls, final output should be stored in *r_o_img
-    //  ** there are many ways to perform timing in c++ such as std::chrono **
-
-    std::chrono::time_point<std::chrono::system_clock> start, end;
-    std::chrono::duration<double> elapsed_time;
-
-    std::cout << "Serial Kernel Execution Times:\n";
 
 /*
     start = std::chrono::system_clock::now();
