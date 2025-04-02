@@ -175,20 +175,37 @@ int main(int argc, char const *argv[]) {
                 exit(1);
     }
 
-    // Switch to uchar4 down the line?
+    /* Questions:
 
-    /* Create fixed initial states using pre-defined sizes:
-        512 x 512
-        2048 x 2048
-        512 x 4096
-        8192 x 1024
+    Questions: What is this for?
+    i_img.create(game_rows, game_cols, CV_8UC1);
+    h_in_board = i_img.ptr<uchar4>(0); // pointer to output image
+    r_in_board = i_img.ptr<uchar4>(0); // pointer to reference serial output image
+    
+    Question: what are these pointers being used for?
+    checkCudaErrors(cudaMalloc((void**)&h_in_board, sizeof(uchar4)*numPixels));
+    checkCudaErrors(cudaMalloc((void**)&h_o_board, sizeof(uchar4)*numPixels));
+
+    Question: Why are we also passing the gameboard to the kernel?
+
     */
 
     const size_t  numPixels = game_rows*game_cols;
 
+    uchar4 *h_in_board, *h_o_board; // host pointers to the initial state board and board after all phases 
+    uchar4 *d_in_board, *d_o_board; // device pointers to the initial state board and board after all phases
+    uchar4 *r_in_board, *r_o_board; // reference serial pointers to initial state board and board after all phases
+
+    // Allocate memory
+    h_in_board = (uchar4 *)malloc(numPixels*sizeof(uchar4));
+    h_o_board = (uchar4 *)malloc(numPixels*sizeof(uchar4));
+    r_in_board = (uchar4 *)malloc(numPixels*sizeof(uchar4));
+    r_o_board = (uchar4 *)malloc(numPixels*sizeof(uchar4));
+
     uchar4 * gameboard;
     gameboard = (uchar4 *)malloc(numPixels*sizeof(uchar4));
-    uchar4 def = make_uchar4(255, 255, 255, 255);
+    
+    // Set gameboard pixels default to all white (dead)
     memset(gameboard, 255, numPixels*sizeof(uchar4));
 
     /* Create randomized initial states using user-input sizes:
@@ -199,11 +216,33 @@ int main(int argc, char const *argv[]) {
     */
     createRandomInitialState(gameboard, game_rows, game_cols);
 
-    uchar4 *h_in_board, *h_o_board; // pointers to the actual image input and output pointers  
-    uchar4 *d_in_board, *d_o_board;
-    uchar4 *r_in_board, *r_o_board; // reference serial output image
+    /* Initiliaze all input boards - copy initial gameboard states
+        1. Host input board
+        2. Serial intial state board
+        3. Serial final state board (input into Conway's game function which will update it using the ptr)
+    */
+    memcpy(h_in_board, gameboard, sizeof(uchar4)*numPixels);
+    memcpy(r_in_board, gameboard, sizeof(uchar4)*numPixels);
+    memcpy(r_o_board, gameboard, sizeof(uchar4)*numPixels);
 
-    cv::Mat i_img, o_img; 
+    // Allocate the memories for the device pointers  
+    checkCudaErrors(cudaMalloc((void**)&d_in_board, sizeof(uchar4)*numPixels));
+    checkCudaErrors(cudaMalloc((void**)&d_o_board, sizeof(uchar4)*numPixels));
+
+    // Copy the image over to GPU here 
+    checkCudaErrors(cudaMemcpy(d_in_board, h_in_board, sizeof(uchar4)*numPixels, cudaMemcpyHostToDevice));
+
+    // Allocate size of temporary variable outside of kernel because it cannot be dynamically defined within the kernel
+    uchar4 *d_temp;
+    checkCudaErrors(cudaMalloc((void**)&d_temp, sizeof(uchar4) * numPixels));
+
+    // kernel launch code
+    par_conway(d_in_board, d_o_board, d_temp, game_rows, game_cols, game_phases); // Select what gameBoard version we want to test
+    cudaDeviceSynchronize();
+    checkCudaErrors(cudaGetLastError());
+
+    // memcpy the output image to the host side.
+    checkCudaErrors(cudaMemcpy(h_o_board, d_o_board, numPixels*sizeof(uchar4), cudaMemcpyDeviceToHost));
 
     // Names of parallel files
     std::string infile = "parallel_initial.bmp"; 
@@ -213,17 +252,6 @@ int main(int argc, char const *argv[]) {
     std::string i_reference = "serial_initial.bmp";
     std::string o_reference = "serial_final.bmp";
 
-    /*Question: What is this for?
-    i_img.create(game_rows, game_cols, CV_8UC1);
-    h_in_board = i_img.ptr<uchar4>(0); // pointer to output image
-    r_in_board = i_img.ptr<uchar4>(0); // pointer to reference serial output image
-    */
-    //Allocate memory
-    h_in_board = (uchar4 *)malloc(sizeof(uchar4)*numPixels); 
-    r_in_board = (uchar4 *)malloc(sizeof(uchar4)*numPixels);
-    h_o_board = (uchar4 *)malloc(sizeof(uchar4)*numPixels);
-    
-
     std::chrono::time_point<std::chrono::system_clock> start, end;
     std::chrono::duration<double> elapsed_time;
 
@@ -231,80 +259,33 @@ int main(int argc, char const *argv[]) {
 
     std::cout << "Serial Image Creation - Initial Board: ";
     start = std::chrono::system_clock::now();
-    serialCreateImage(gameboard, game_rows, game_cols, i_reference);
+    serialCreateImage(r_in_board, game_rows, game_cols, i_reference);
     end = std::chrono::system_clock::now();
     elapsed_time = end-start;
     std::cout << elapsed_time.count() << "s\n";
 
-    //Copy initial gameboard state
-    memcpy(h_in_board, gameboard, sizeof(uchar4)*numPixels);
-
     std::cout << "Serial Conways: ";
     start = std::chrono::system_clock::now();
-    serialConways(gameboard, game_rows, game_cols, game_phases);
+    // Needs to be r_o_board because it is edited in the Conway function (maintain r_in_board)
+    serialConways(r_o_board, game_rows, game_cols, game_phases);
     end = std::chrono::system_clock::now();
     elapsed_time = end-start;
     std::cout << elapsed_time.count() << "s\n";
 
     std::cout << "Serial Image Creation - Final Board: ";
     start = std::chrono::system_clock::now();
-    serialCreateImage(gameboard, game_rows, game_cols, o_reference);
+    serialCreateImage(r_o_board, game_rows, game_cols, o_reference);
     end = std::chrono::system_clock::now();
     elapsed_time = end-start;
     std::cout << elapsed_time.count() << "s\n";
 
-    // Question: what are these pointers being used for?
-    //checkCudaErrors(cudaMalloc((void**)&h_in_board, sizeof(uchar4)*numPixels));
-    //checkCudaErrors(cudaMalloc((void**)&h_o_board, sizeof(uchar4)*numPixels));
-
-    // allocate the memories for the device pointers  
-    checkCudaErrors(cudaMalloc((void**)&d_in_board, sizeof(uchar4)*numPixels));
-    checkCudaErrors(cudaMalloc((void**)&d_o_board, sizeof(uchar4)*numPixels));
-
-    // copy the image over to GPU here 
-    checkCudaErrors(cudaMemcpy(d_in_board, h_in_board, sizeof(uchar4)*numPixels, cudaMemcpyHostToDevice));
-
-    //Allocate size of temporary variable outside of kernel because it cannot be dynamically defined within the kernel
-    uchar4 *d_temp;
-    cudaMalloc(&d_temp, sizeof(uchar4) * numPixels);  
-
-    // kernel launch code 
-    //Question: Why are we also passing the gameboard to the kernel
-    par_conway(gameboard, d_in_board, d_o_board, d_temp, game_rows, game_cols, game_phases); // Select what gameBoard version we want to test
-    cudaDeviceSynchronize();
-    checkCudaErrors(cudaGetLastError());
-
-    // memcpy the output image to the host side.
-    checkCudaErrors(cudaMemcpy(h_o_board, d_o_board, numPixels*sizeof(uchar4), cudaMemcpyDeviceToHost));
-
-    //Create GPU image
+    // Create GPU images (initial state, final state)
+    serialCreateImage(h_in_board, game_rows, game_cols, infile);
     serialCreateImage(h_o_board, game_rows, game_cols, outfile);
-
-/*
-    start = std::chrono::system_clock::now();
-    serialGaussianBlur(h_red, h_red_blurred, img.rows, img.cols, h_filter, fWidth);
-    end = std::chrono::system_clock::now();
-    elapsed_time = end-start;
-    std::cout << "GaussianBlur: " << elapsed_time.count() << "s\n";
-
-    // create the image with the output data 
-    cv::Mat output(img.rows, img.cols, CV_8UC4, (void*)h_o_img); // generate GPU output image.
-    bool suc = cv::imwrite(outfile.c_str(), output);
-    if(!suc){
-        std::cerr << "Couldn't write GPU image!\n";
-        exit(1);
-    }
-    cv::Mat output_s(img.rows, img.cols, CV_8UC4, (void*)r_o_img); // generate serial output image
-    suc = cv::imwrite(reference.c_str(), output_s);
-    if(!suc){
-        std::cerr << "Couldn't write serial image!\n";
-        exit(1);
-    }
     
     // check if the caclulation was correct to a degree of tolerance
+    checkResult(o_reference, outfile, 1e-5);
 
-    checkResult(reference, outfile, 1e-5);
-*/
     // free any necessary memory.
     cudaFree(d_in_board);
     cudaFree(d_o_board);
@@ -312,7 +293,7 @@ int main(int argc, char const *argv[]) {
     free(h_in_board);
     free(h_o_board);
     free(r_in_board);
-    // free gameboards?
+    free(r_o_board);
 
     return 0;
 }
