@@ -1,7 +1,7 @@
 NVCC=nvcc 
 
-OPENCV_INCLUDEPATH=/home/sreinde/software/spackages/linux-rocky8-skylake_avx512/gcc-12.3.0/opencv-4.8.0-miqey2j5nnm57c5mlgd4rhgdwcsu3yku/include/opencv4
-OPENCV_LIBPATH=/home/sreinde/software/spackages/linux-rocky8-skylake_avx512/gcc-12.3.0/opencv-4.8.0-miqey2j5nnm57c5mlgd4rhgdwcsu3yku/lib64
+OPENCV_INCLUDEPATH="$(HOME)/software/spackages/linux-rocky8-skylake_avx512/gcc-12.3.0/opencv-4.8.0-miqey2j5nnm57c5mlgd4rhgdwcsu3yku/include/opencv4"
+OPENCV_LIBPATH=$(HOME)/software/spackages/linux-rocky8-skylake_avx512/gcc-12.3.0/opencv-4.8.0-miqey2j5nnm57c5mlgd4rhgdwcsu3yku/lib64
 
 OPENCV_LIBS= -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
 OPENCV_CFLAGS=`pkg-config --cflags opencv4`

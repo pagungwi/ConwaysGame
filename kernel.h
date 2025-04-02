@@ -12,4 +12,4 @@
 
 
 
-void par_conway(uchar4* d_gameboard, uchar4 *d_in_img, uchar4 *d_out_img, size_t rows, size_t cols, size_t phases);
+void par_conway(uchar4* d_gameboard, uchar4 *d_in_img, uchar4 *d_out_img, uchar4 *d_temp, size_t rows, size_t cols, size_t phases);

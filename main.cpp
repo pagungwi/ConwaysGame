@@ -89,7 +89,9 @@ Kernel for running Conway's Game of Life Serially for x phases/iterations
 void serialConways(uchar4 *in, const int rows, const int cols, const int phases)
 {
     for(int p = 0; p < phases; p++) {
+        //Question: can this be done outside of the loop since we don't need to re-malloc seeing as it gets overwitten?
         uchar4 * temp = (uchar4 *)malloc(rows*cols*sizeof(uchar4));
+
         for(int r = 0; r < rows; r++) {
             for(int c = 0; c < cols; c++) {
                 int count = 0;
@@ -211,9 +213,16 @@ int main(int argc, char const *argv[]) {
     std::string i_reference = "serial_initial.bmp";
     std::string o_reference = "serial_final.bmp";
 
+    /*Question: What is this for?
     i_img.create(game_rows, game_cols, CV_8UC1);
     h_in_board = i_img.ptr<uchar4>(0); // pointer to output image
     r_in_board = i_img.ptr<uchar4>(0); // pointer to reference serial output image
+    */
+    //Allocate memory
+    h_in_board = (uchar4 *)malloc(sizeof(uchar4)*numPixels); 
+    r_in_board = (uchar4 *)malloc(sizeof(uchar4)*numPixels);
+    h_o_board = (uchar4 *)malloc(sizeof(uchar4)*numPixels);
+    
 
     std::chrono::time_point<std::chrono::system_clock> start, end;
     std::chrono::duration<double> elapsed_time;
@@ -226,6 +235,9 @@ int main(int argc, char const *argv[]) {
     end = std::chrono::system_clock::now();
     elapsed_time = end-start;
     std::cout << elapsed_time.count() << "s\n";
+
+    //Copy initial gameboard state
+    memcpy(h_in_board, gameboard, sizeof(uchar4)*numPixels);
 
     std::cout << "Serial Conways: ";
     start = std::chrono::system_clock::now();
@@ -241,22 +253,32 @@ int main(int argc, char const *argv[]) {
     elapsed_time = end-start;
     std::cout << elapsed_time.count() << "s\n";
 
-    checkCudaErrors(cudaMalloc((void**)&h_in_board, sizeof(uchar4)*numPixels));
-    checkCudaErrors(cudaMalloc((void**)&h_o_board, sizeof(uchar4)*numPixels));
+    // Question: what are these pointers being used for?
+    //checkCudaErrors(cudaMalloc((void**)&h_in_board, sizeof(uchar4)*numPixels));
+    //checkCudaErrors(cudaMalloc((void**)&h_o_board, sizeof(uchar4)*numPixels));
+
     // allocate the memories for the device pointers  
     checkCudaErrors(cudaMalloc((void**)&d_in_board, sizeof(uchar4)*numPixels));
     checkCudaErrors(cudaMalloc((void**)&d_o_board, sizeof(uchar4)*numPixels));
 
-    // copy the image and filter over to GPU here 
+    // copy the image over to GPU here 
     checkCudaErrors(cudaMemcpy(d_in_board, h_in_board, sizeof(uchar4)*numPixels, cudaMemcpyHostToDevice));
 
+    //Allocate size of temporary variable outside of kernel because it cannot be dynamically defined within the kernel
+    uchar4 *d_temp;
+    cudaMalloc(&d_temp, sizeof(uchar4) * numPixels);  
+
     // kernel launch code 
-    par_conway(gameboard, d_in_board, d_o_board, game_rows, game_cols, game_phases); // Select what gameBoard version we want to test
+    //Question: Why are we also passing the gameboard to the kernel
+    par_conway(gameboard, d_in_board, d_o_board, d_temp, game_rows, game_cols, game_phases); // Select what gameBoard version we want to test
     cudaDeviceSynchronize();
     checkCudaErrors(cudaGetLastError());
 
     // memcpy the output image to the host side.
     checkCudaErrors(cudaMemcpy(h_o_board, d_o_board, numPixels*sizeof(uchar4), cudaMemcpyDeviceToHost));
+
+    //Create GPU image
+    serialCreateImage(h_o_board, game_rows, game_cols, outfile);
 
 /*
     start = std::chrono::system_clock::now();
@@ -287,6 +309,9 @@ int main(int argc, char const *argv[]) {
     cudaFree(d_in_board);
     cudaFree(d_o_board);
     free(gameboard);
+    free(h_in_board);
+    free(h_o_board);
+    free(r_in_board);
     // free gameboards?
 
     return 0;
