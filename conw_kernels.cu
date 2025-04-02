@@ -26,7 +26,7 @@ void global_Conways(uchar4*d_in, uchar4*d_out, uchar4*d_temp, const int rows, co
         int x = threadIdx.x + blockIdx.x * blockDim.x;
         int y = threadIdx.y + blockIdx.y * blockDim.y; 
 
-        int position = x*cols+y;
+        int position = y*cols+x;
       
         for(int p = 0; p < phases; p++) {
                 
@@ -42,20 +42,20 @@ void global_Conways(uchar4*d_in, uchar4*d_out, uchar4*d_temp, const int rows, co
                 int bot_m = position + cols;
                 int bot_r = position + cols + 1;
                 
-                if(x > -1 && x < cols && y > -1 && y < rows)
+                if(position < rows*cols && position > -1)
                 {
                         // Check if neighbors alive or dead, add to alive count
-                        if(y != 0) // Need to check if on left wall of image
+                        if(x % cols != 0) // Need to check if on left wall of image
                         {
-                        if(top_l < rows*cols && top_l > -1 && d_in[top_l].x == 0) { count++; } // top left neighbor
-                        if(mid_l < rows*cols && mid_l > -1 && d_in[mid_l].x == 0) { count++; } // mid left neigbor
-                        if(bot_l < rows*cols && bot_l > -1 && d_in[bot_l].x == 0) { count++; } // bottom left neighbor
+                                if(top_l < rows*cols && top_l > -1 && d_in[top_l].x == 0) { count++; } // top left neighbor
+                                if(mid_l < rows*cols && mid_l > -1 && d_in[mid_l].x == 0) { count++; } // mid left neigbor
+                                if(bot_l < rows*cols && bot_l > -1 && d_in[bot_l].x == 0) { count++; } // bottom left neighbor
                         }
-                        if(y != cols-1) // Need to check if on right wall of image
+                        if(x % (cols-1) != 0) // Need to check if on right wall of image
                         {   
-                        if(top_r < rows*cols && top_r > -1 && d_in[top_r].x == 0) { count++; } // top right neighbor
-                        if(mid_r < rows*cols && mid_r > -1 && d_in[mid_r].x == 0) { count++; } // middle right neighbor
-                        if(bot_r < rows*cols && bot_r > -1 && d_in[bot_r].x == 0) { count++; }// bottom right neighbor
+                                if(top_r < rows*cols && top_r > -1 && d_in[top_r].x == 0) { count++; } // top right neighbor
+                                if(mid_r < rows*cols && mid_r > -1 && d_in[mid_r].x == 0) { count++; } // middle right neighbor
+                                if(bot_r < rows*cols && bot_r > -1 && d_in[bot_r].x == 0) { count++; }// bottom right neighbor
                         }
                         if(top_m < rows*cols && top_m > -1 && d_in[top_m].x == 0) { count++; } // top middle neighbor
                         if(bot_m < rows*cols && bot_m > -1 && d_in[bot_m].x == 0) { count++; } // bottom middle neighbor
@@ -67,8 +67,9 @@ void global_Conways(uchar4*d_in, uchar4*d_out, uchar4*d_temp, const int rows, co
                         else {d_temp[position] = make_uchar4(255,255,255,255);} // if dead, stay dead
                         d_in[position] = d_temp[position];
                 }
+                __syncthreads();
         }
-        if(x > -1 && x < cols && y > -1 && y < rows)
+        if(position < rows*cols && position > -1)
         {
                 d_out[position] = d_in[position];
         }
