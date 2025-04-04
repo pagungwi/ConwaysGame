@@ -22,7 +22,7 @@ void shared_CreateImage(uchar4*d_in, uchar4*d_out, const int rows, const int col
 
 
 __global__ 
-void global_Conways(uchar4*d_in, uchar4*d_out, uchar4*d_temp, const int rows, const int cols, const int phases){
+void global_Conways(uchar4*d_in, uchar4*d_out, const int rows, const int cols, const int phases){
         int x = threadIdx.x + blockIdx.x * blockDim.x;
         int y = threadIdx.y + blockIdx.y * blockDim.y; 
 
@@ -42,7 +42,7 @@ void global_Conways(uchar4*d_in, uchar4*d_out, uchar4*d_temp, const int rows, co
         int bot_m = position + cols;
         int bot_r = position + cols + 1;
         
-        if(position < rows*cols && position > -1)
+        if(x < cols && y < rows)
         {
                 // Check if neighbors alive or dead, add to alive count
                 if(x % cols != 0) // Need to check if on left wall of image
@@ -51,7 +51,7 @@ void global_Conways(uchar4*d_in, uchar4*d_out, uchar4*d_temp, const int rows, co
                         if(mid_l < rows*cols && mid_l > -1 && d_in[mid_l].x == 0) { count++; } // mid left neigbor
                         if(bot_l < rows*cols && bot_l > -1 && d_in[bot_l].x == 0) { count++; } // bottom left neighbor
                 }
-                if(x % (cols-1) != 0) // Need to check if on right wall of image
+                if(x % cols != cols-1) // Need to check if on right wall of image
                 {   
                         if(top_r < rows*cols && top_r > -1 && d_in[top_r].x == 0) { count++; } // top right neighbor
                         if(mid_r < rows*cols && mid_r > -1 && d_in[mid_r].x == 0) { count++; } // middle right neighbor
@@ -61,18 +61,18 @@ void global_Conways(uchar4*d_in, uchar4*d_out, uchar4*d_temp, const int rows, co
                 if(bot_m < rows*cols && bot_m > -1 && d_in[bot_m].x == 0) { count++; } // bottom middle neighbor
 
                 // Update temp board based on counts
-                if(d_in[position].x == 0 && (count < 2 || count > 3)) {d_temp[position] = make_uchar4(255,255,255,255);} // if alive, make dead
-                else if(d_in[position].x == 0 && (count == 2 || count == 3)) {d_temp[position] = make_uchar4(0,0,0,255);} // if alive, stay alive
-                else if(d_in[position].x == 255 && (count == 3)) {d_temp[position] = make_uchar4(0,0,0,255);} // if dead, make alive
-                else {d_temp[position] = make_uchar4(255,255,255,255);} // if dead, stay dead
+                if(d_in[position].x == 0 && (count < 2 || count > 3)) {d_out[position] = make_uchar4(255,255,255,255);} // if alive, make dead
+                else if(d_in[position].x == 0 && (count == 2 || count == 3)) {d_out[position] = make_uchar4(0,0,0,255);} // if alive, stay alive
+                else if(d_in[position].x == 255 && (count == 3)) {d_out[position] = make_uchar4(0,0,0,255);} // if dead, make alive
+                else {d_out[position] = make_uchar4(255,255,255,255);} // if dead, stay dead
 
-                d_in[position] = d_temp[position];
+                //d_in[position] = d_temp[position];
         }
-        __syncthreads();
-        if(position < rows*cols && position > -1)
+        /*if(x < cols && y < rows)
         {
                 d_out[position] = d_in[position];
         }
+        */
 }
 
 __global__ 
@@ -81,7 +81,7 @@ void shared_Conways(uchar4*d_in, uchar4*d_out, const int rows, const int cols){
 }
 
 
-void par_conway(uchar4 *d_in_img, uchar4 *d_out_img, uchar4 *d_temp, size_t rows, size_t cols, size_t phases){
+void par_conway(uchar4 *d_in_img, uchar4 *d_out_img, size_t rows, size_t cols, size_t phases){
  
         // Defines number of blocks needed for data size
         dim3 gridSize((cols-1)/BLOCK+1, (rows-1)/BLOCK+1,1);
@@ -89,10 +89,17 @@ void par_conway(uchar4 *d_in_img, uchar4 *d_out_img, uchar4 *d_temp, size_t rows
         dim3 blockSize(BLOCK, BLOCK, 1);
 
         for(int p = 0; p < phases; p++) {
-                global_Conways<<<gridSize, blockSize>>>(d_in_img, d_out_img, d_temp, rows, cols, phases);
+                global_Conways<<<gridSize, blockSize>>>(d_in_img, d_out_img, rows, cols, phases);
                 cudaDeviceSynchronize();
                 checkCudaErrors(cudaGetLastError());
-        }
+                
+                 // Update gmaeboard state for next phase
+                uchar4* temp = d_in_img;
+                d_in_img = d_out_img;
+                d_out_img = temp;
+    }
+
+        
 
 /*
         gaussianBlur<<<gridSize, blockSize>>>(d_green, d_gblurred, rows, cols, d_filter, filterWidth);

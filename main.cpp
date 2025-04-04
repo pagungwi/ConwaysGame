@@ -88,10 +88,11 @@ Kernel for running Conway's Game of Life Serially for x phases/iterations
  */
 void serialConways(uchar4 *in, const int rows, const int cols, const int phases)
 {
-    for(int p = 0; p < phases; p++) {
-        //Question: can this be done outside of the loop since we don't need to re-malloc seeing as it gets overwitten?
-        uchar4 * temp = (uchar4 *)malloc(rows*cols*sizeof(uchar4));
+    uchar4 * temp = (uchar4 *)malloc(rows*cols*sizeof(uchar4));
 
+    for(int p = 0; p < phases; p++) {
+       
+    
         for(int r = 0; r < rows; r++) {
             for(int c = 0; c < cols; c++) {
                 int count = 0;
@@ -132,8 +133,8 @@ void serialConways(uchar4 *in, const int rows, const int cols, const int phases)
                 in[r*cols+c] = temp[r*cols+c];
             }
         }
-        free(temp);
     }
+    free(temp);
 }
 
 /*
@@ -232,12 +233,13 @@ int main(int argc, char const *argv[]) {
     // Copy the image over to GPU here 
     checkCudaErrors(cudaMemcpy(d_in_board, h_in_board, sizeof(uchar4)*numPixels, cudaMemcpyHostToDevice));
 
-    // Allocate size of temporary variable outside of kernel because it cannot be dynamically defined within the kernel
+    /* Allocate size of temporary variable outside of kernel because it cannot be dynamically defined within the kernel
     uchar4 *d_temp;
     checkCudaErrors(cudaMalloc((void**)&d_temp, sizeof(uchar4) * numPixels));
+    */
 
     // kernel launch code
-    par_conway(d_in_board, d_o_board, d_temp, game_rows, game_cols, game_phases); // Select what gameBoard version we want to test
+    par_conway(d_in_board, d_o_board, game_rows, game_cols, game_phases); // Select what gameBoard version we want to test
     cudaDeviceSynchronize();
     checkCudaErrors(cudaGetLastError());
 
