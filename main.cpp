@@ -244,7 +244,14 @@ int main(int argc, char const *argv[]) {
     checkCudaErrors(cudaGetLastError());
 
     // memcpy the output image to the host side.
-    checkCudaErrors(cudaMemcpy(h_o_board, d_o_board, numPixels*sizeof(uchar4), cudaMemcpyDeviceToHost));
+    if(game_phases % 2 == 0)
+    {
+        checkCudaErrors(cudaMemcpy(h_o_board, d_in_board, numPixels*sizeof(uchar4), cudaMemcpyDeviceToHost));
+    }
+    else
+    {
+        checkCudaErrors(cudaMemcpy(h_o_board, d_o_board, numPixels*sizeof(uchar4), cudaMemcpyDeviceToHost));
+    }
 
     // Names of parallel files
     std::string infile = "parallel_initial.bmp"; 
