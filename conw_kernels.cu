@@ -1,7 +1,7 @@
-#include "./kernel.h" 
+#include "./kernel.h"
 
 #define BLOCK 16
-#define TILE_WIDTH (BLOCK+1)
+#define TILE_WIDTH (BLOCK + 2*RADIUS)
 #define RADIUS 1
 
 /* Don't need global or shared create image:
@@ -11,16 +11,10 @@
 */
 
 __global__ 
-void global_CreateImage(uchar4*d_in, uchar4*d_out, const int rows, const int cols, uchar4 * image){
-
-}
-
+void global_CreateImage(uchar4*d_in, uchar4*d_out, const int rows, const int cols, uchar4 * image){}
 
 __global__ 
-void shared_CreateImage(uchar4*d_in, uchar4*d_out, const int rows, const int cols, uchar4 * image){
-
-}
-
+void shared_CreateImage(uchar4*d_in, uchar4*d_out, const int rows, const int cols, uchar4 * image){}
 
 __global__ 
 void global_Conways(uchar4*d_in, uchar4*d_out, const int rows, const int cols, const int phases){
@@ -28,9 +22,6 @@ void global_Conways(uchar4*d_in, uchar4*d_out, const int rows, const int cols, c
         int y = threadIdx.y + blockIdx.y * blockDim.y; 
 
         int position = y*cols+x;
-      
-        
-        
         int count = 0;
         
         // Neighbor positions
@@ -66,14 +57,7 @@ void global_Conways(uchar4*d_in, uchar4*d_out, const int rows, const int cols, c
                 else if(d_in[position].x == 0 && (count == 2 || count == 3)) {d_out[position] = make_uchar4(0,0,0,255);} // if alive, stay alive
                 else if(d_in[position].x == 255 && (count == 3)) {d_out[position] = make_uchar4(0,0,0,255);} // if dead, make alive
                 else {d_out[position] = make_uchar4(255,255,255,255);} // if dead, stay dead
-
-                //d_in[position] = d_temp[position];
         }
-        /*if(x < cols && y < rows)
-        {
-                d_out[position] = d_in[position];
-        }
-        */
 }
 
 __global__ 
@@ -87,115 +71,111 @@ void shared_Conways(uchar4*d_in, uchar4*d_out, const int rows, const int cols, c
 
         int position = y*cols+x;
         int count = 0;
-        
-        /* Load original block dims into center of shared tile*/
-        if(x < cols && y < rows) {
-                ds_in[ty + RADIUS][tx + RADIUS] = d_in[y*cols+x];
-        } else { 
-                ds_in[ty + RADIUS][tx + RADIUS] = make_uchar4(255, 255, 255, 255); // Pad with dead cells
+        // Step 1: Load the original image block into the center of ds_in
+        if (y < rows && x < cols) {
+                ds_in[ty + RADIUS][tx + RADIUS] = d_in[y * cols + x];
+        } else {
+                ds_in[ty + RADIUS][tx + RADIUS] = make_uchar4(255, 255, 255, 255);   // Zero-padding for out-of-boundary
         }
 
-        // Left halo (tx < 1)
-        if(tx == 0) {
-                if(x-RADIUS >= 0 && y < rows) {
-                        ds_in[ty+RADIUS][tx] = d_in[y*cols+(x-RADIUS)];
+        // Left halo
+        if (tx == 0) {
+                int halo_x = x - RADIUS;
+                if (halo_x >= 0 && y < rows) {
+                ds_in[ty + RADIUS][tx] = d_in[y * cols + halo_x];
                 } else {
-                        ds_in[ty+RADIUS][tx] = make_uchar4(255, 255, 255, 255);
+                ds_in[ty + RADIUS][tx] = make_uchar4(255, 255, 255, 255);   // Zero-padding for out-of-boundary
                 }
         }
-        // Right halo (tx = cols)
-        if(tx == cols) {
-                if(x+RADIUS < cols && y < rows) {
-                        ds_in[ty+RADIUS][tx + 2*RADIUS] = d_in[y*cols+(x+RADIUS)];
+        // Right halo
+        if (tx == BLOCK - RADIUS) {
+                int halo_x = x + RADIUS;
+                if (halo_x < cols && y < rows) {
+                ds_in[ty + RADIUS][tx + 2 * RADIUS] = d_in[y * cols + halo_x];
                 } else {
-                        ds_in[ty+RADIUS][tx + 2*RADIUS] = make_uchar4(255, 255, 255, 255);
+                ds_in[ty + RADIUS][tx + 2 * RADIUS] = make_uchar4(255, 255, 255, 255);  // Zero-padding for out-of-boundary
                 }
         }
-        // Top halo (ty < 1)
-        if(ty == 0) {
-                if(x < cols && y-RADIUS >= 0) {
-                        ds_in[ty][tx+RADIUS] = d_in[(y-RADIUS)*cols+x];
+        // Top halo
+        if (ty == 0) {
+                int halo_y = y - RADIUS;
+                if (halo_y >= 0 && x < cols) {
+                ds_in[ty][tx + RADIUS] = d_in[halo_y * cols + x];
                 } else {
-                        ds_in[ty][tx+RADIUS] = make_uchar4(255, 255, 255, 255);
+                ds_in[ty][tx + RADIUS] = make_uchar4(255, 255, 255, 255);   // Zero-padding for out-of-boundary
                 }
         }
-        // Bottom halo (ty = rows)
-        if(ty == rows) {
-                if(x < cols && y+RADIUS < rows) {
-                        ds_in[ty + 2*RADIUS][tx+RADIUS] = d_in[(y+RADIUS)*cols+x];
+        // Bottom halo
+        if (ty == BLOCK - RADIUS) {
+                int halo_y = y + RADIUS;
+                if (halo_y < rows && x < cols) {
+                ds_in[ty + 2 * RADIUS][tx + RADIUS] = d_in[halo_y * cols + x];
                 } else {
-                        ds_in[ty + 2*RADIUS][tx+RADIUS] = make_uchar4(255, 255, 255, 255);
+                ds_in[ty + 2 * RADIUS][tx + RADIUS] = make_uchar4(255, 255, 255, 255);   // Zero-padding for out-of-boundary
                 }
         }
         // Top-left corner
-        if(tx == 0 && ty == 0)
-        {
-                if(x-RADIUS >= 0 && y-RADIUS >=0) {
-                        ds_in[ty][tx] = d_in[(y-RADIUS)*cols+(x-RADIUS)]; 
+        if (tx == 0 && ty == 0) {
+                int halo_x = x - RADIUS;
+                int halo_y = y - RADIUS;
+                if (halo_x >= 0 && halo_y >= 0) {
+                ds_in[ty][tx] = d_in[halo_y * cols + halo_x];
                 } else {
-                        ds_in[ty + 2*RADIUS][tx+RADIUS] = make_uchar4(255, 255, 255, 255);
+                ds_in[ty][tx] = make_uchar4(255, 255, 255, 255);   // Zero-padding for out-of-boundary
                 }
         }
         // Top-right corner
-        if(tx == cols && ty == 0) {
-                if(x+RADIUS < cols && y-RADIUS >= 0) {
-                        ds_in[ty][tx] = d_in[(y-RADIUS)*cols+(x+RADIUS)];
+        if (tx == BLOCK - RADIUS && ty == 0) {
+                int halo_x = x + RADIUS;
+                int halo_y = y - RADIUS;
+                if (halo_x < cols && halo_y >= 0) {
+                ds_in[ty][tx + 2 * RADIUS] = d_in[halo_y * cols + halo_x];
                 } else {
-                        ds_in[ty + 2*RADIUS][tx+RADIUS] = make_uchar4(255, 255, 255, 255);
+                ds_in[ty][tx + 2 * RADIUS] = make_uchar4(255, 255, 255, 255);   // Zero-padding for out-of-boundary
                 }
         }
-        // Bot-left corner
-        if(tx == 0 && ty == rows) {
-                if(x-RADIUS >= 0 && y+RADIUS < rows) {
-                        ds_in[ty][tx] = d_in[(y+RADIUS)*cols+(x-RADIUS)];
+        // Bottom-left corner
+        if (tx == 0 && ty == BLOCK - RADIUS) {
+                int halo_x = x - RADIUS;
+                int halo_y = y + RADIUS;
+                if (halo_x >= 0 && halo_y < rows) {
+                ds_in[ty + 2 * RADIUS][tx] = d_in[halo_y * cols + halo_x];
                 } else {
-                        ds_in[ty + 2*RADIUS][tx+RADIUS] = make_uchar4(255, 255, 255, 255);
+                ds_in[ty + 2 * RADIUS][tx] = make_uchar4(255, 255, 255, 255);  // Zero-padding for out-of-boundary
                 }
         }
-        // Bot-right corner
-        if(tx == cols && ty == rows) {
-                if(x+RADIUS < cols && y+RADIUS < rows) {
-                        ds_in[ty][tx] = d_in[(y+RADIUS)*cols+(x+RADIUS)];
+        // Bottom-right corner
+        if (tx == BLOCK - RADIUS && ty == BLOCK - RADIUS) {
+                int halo_x = x + RADIUS;
+                int halo_y = y + RADIUS;
+                if (halo_x < cols && halo_y < rows) {
+                ds_in[ty + 2 * RADIUS][tx + 2 * RADIUS] = d_in[halo_y * cols + halo_x];
                 } else {
-                        ds_in[ty + 2*RADIUS][tx+RADIUS] = make_uchar4(255, 255, 255, 255);
+                ds_in[ty + 2 * RADIUS][tx + 2 * RADIUS] = make_uchar4(255, 255, 255, 255);  // Zero-padding for out-of-boundary
                 }
         }
         __syncthreads();
-        
-        uchar4 nextState;
-        uchar4 initialState = ds_in[ty+1][tx+1];
 
         if(x < cols && y < rows)
         {
-                // Check if neighbors alive or dead, add to alive count
-                if(x % cols != 0) // Need to check if on left wall of image
-                {
-                        if(y % rows != 0 && ds_in[ty][tx].x == 0) { count++; } // top left neighbor
-                        if(ds_in[ty+1][tx].x == 0) { count++; } // mid left neigbor
-                        if(y % rows != rows-1 && ds_in[ty+2][tx].x == 0) { count++; } // bottom left neighbor
-                }
-                if(x % cols != cols-1) // Need to check if on right wall of image
-                {   
-                        if(y % rows != 0 && ds_in[ty][tx+2].x == 0) { count++; } // top right neighbor
-                        if(ds_in[ty+1][tx+2].x == 0) { count++; } // middle right neighbor
-                        if(y % rows != rows-1 && ds_in[ty+2][tx+2].x == 0) { count++; }// bottom right neighbor
-                }
-                if(y % rows != 0 && ds_in[ty][tx+1].x == 0) { count++; } // top middle neighbor
-                if(y % rows != rows-1 && ds_in[ty+2][tx+1].x == 0) { count++; } // bottom middle neighbor
+                int row_shared = ty + RADIUS;
+                int col_shared = tx + RADIUS;
+                
+                if(ds_in[row_shared][col_shared-1].x == 0) { count++; } // mid left neigbor
+                if(ds_in[row_shared-1][col_shared-1].x == 0) { count++; } // top left neighbor
+                if(ds_in[row_shared+1][col_shared-1].x == 0) { count++; } // bottom left neighbor
+                if(ds_in[row_shared][col_shared+1].x == 0) { count++; } // middle right neighbor
+                if(ds_in[row_shared-1][col_shared+1].x == 0) { count++; } // top right neighbor
+                if(ds_in[row_shared+1][col_shared+1].x == 0) { count++; }// bottom right neighbor
+                if(ds_in[row_shared-1][col_shared].x == 0) { count++; } // top middle neighbor
+                if(ds_in[row_shared+1][col_shared].x == 0) { count++; } // bottom middle neighbor
 
-                // Update temp board based on counts
-                if(initialState.x == 0 && (count < 2 || count > 3)) {nextState = make_uchar4(255,255,255,255);} // if alive, make dead
-                else if(initialState.x == 0 && (count == 2 || count == 3)) {nextState = make_uchar4(0,0,0,255);} // if alive, stay alive
-                else if(initialState.x == 255 && (count == 3)) {nextState = make_uchar4(0,0,0,255);} // if dead, make alive
-                else {nextState = make_uchar4(255,255,255,255);} // if dead, stay dead
-        }
-        __syncthreads();
-        if(x < cols && y < rows)
-        {
-                d_out[position] = nextState;
+                if(ds_in[row_shared][col_shared].x == 0 && (count < 2 || count > 3)) {d_out[position] = make_uchar4(255,255,255,255);} // if alive, make dead
+                else if(ds_in[row_shared][col_shared].x == 0 && (count == 2 || count == 3)) {d_out[position] = make_uchar4(0,0,0,255);} // if alive, stay alive
+                else if(ds_in[row_shared][col_shared].x == 255 && (count == 3)) {d_out[position] = make_uchar4(0,0,0,255);} // if dead, make alive
+                else {d_out[position] = make_uchar4(255,255,255,255);} // if dead, stay dead    
         }
 }
-
 
 void par_conway(uchar4 *d_in_img, uchar4 *d_out_img, size_t rows, size_t cols, size_t phases){
  
@@ -204,9 +184,15 @@ void par_conway(uchar4 *d_in_img, uchar4 *d_out_img, size_t rows, size_t cols, s
         // Defines number of threads per block
         dim3 blockSize(BLOCK, BLOCK, 1);
 
+        std::chrono::time_point<std::chrono::system_clock> start, end;
+        std::chrono::duration<double> elapsed_time;
+
+        std::cout << "Parallel Kernel Execution Time:\n";
+
+        start = std::chrono::system_clock::now();
         for(int p = 0; p < phases; p++) {
-                global_Conways<<<gridSize, blockSize>>>(d_in_img, d_out_img, rows, cols, phases);
-                //shared_Conways<<<gridSize, blockSize>>>(d_in_img, d_out_img, rows, cols, phases);
+                //global_Conways<<<gridSize, blockSize>>>(d_in_img, d_out_img, rows, cols, phases);
+                shared_Conways<<<gridSize, blockSize>>>(d_in_img, d_out_img, rows, cols, phases);
                 cudaDeviceSynchronize();
                 checkCudaErrors(cudaGetLastError());
                 
@@ -215,16 +201,9 @@ void par_conway(uchar4 *d_in_img, uchar4 *d_out_img, size_t rows, size_t cols, s
                 d_in_img = d_out_img;
                 d_out_img = temp;
         }
-
-/*
-        gaussianBlur<<<gridSize, blockSize>>>(d_green, d_gblurred, rows, cols, d_filter, filterWidth);
-        cudaDeviceSynchronize();
-        checkCudaErrors(cudaGetLastError());
-
-        gaussianBlur<<<gridSize, blockSize>>>(d_blue, d_bblurred, rows, cols, d_filter, filterWidth);
-        cudaDeviceSynchronize();
-        checkCudaErrors(cudaGetLastError());
-*/
+        end = std::chrono::system_clock::now();
+        elapsed_time = end-start;
+        std::cout << elapsed_time.count() << "s\n";
 }
 
 

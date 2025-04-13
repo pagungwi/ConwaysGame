@@ -1,6 +1,8 @@
 #include <cuda_runtime.h> 
-#include <cuda.h> 
+#include <cuda.h>
+#include <chrono>
 #include "utils.h"
+
 
 /*
  * The launcher for your kernels. 
