@@ -1,0 +1,45 @@
+Parallel Kernel Execution Time:
+0.0608388s
+Serial Kernel Execution Times:
+Serial Image Creation - Initial Board: 0.0585745s
+Serial Conways: 5.59546s
+Serial Image Creation - Final Board: 0.0603432s
+PASSED!
+Generating '/local_scratch/slurm.2761253/nsys-report-2b06.qdstrm'
+[1/7] [0%                          ] report26.nsys-rep[1/7] [0%                          ] report26.nsys-rep[1/7] [======33%                   ] report26.nsys-rep[1/7] [============57%             ] report26.nsys-rep[1/7] [=================72%        ] report26.nsys-rep[1/7] [=====================88%    ] report26.nsys-rep[1/7] [========================97% ] report26.nsys-rep[1/7] [========================98% ] report26.nsys-rep[1/7] [========================99% ] report26.nsys-rep[1/7] [========================100%] report26.nsys-rep[1/7] [========================100%] report26.nsys-rep
+[2/7] [0%                          ] report26.sqlite[2/7] [1%                          ] report26.sqlite[2/7] [2%                          ] report26.sqlite[2/7] [3%                          ] report26.sqlite[2/7] [4%                          ] report26.sqlite[2/7] [5%                          ] report26.sqlite[2/7] [6%                          ] report26.sqlite[2/7] [7%                          ] report26.sqlite[2/7] [8%                          ] report26.sqlite[2/7] [9%                          ] report26.sqlite[2/7] [10%                         ] report26.sqlite[2/7] [11%                         ] report26.sqlite[2/7] [12%                         ] report26.sqlite[2/7] [13%                         ] report26.sqlite[2/7] [14%                         ] report26.sqlite[2/7] [=15%                        ] report26.sqlite[2/7] [=16%                        ] report26.sqlite[2/7] [=17%                        ] report26.sqlite[2/7] [==18%                       ] report26.sqlite[2/7] [==19%                       ] report26.sqlite[2/7] [==20%                       ] report26.sqlite[2/7] [==21%                       ] report26.sqlite[2/7] [===22%                      ] report26.sqlite[2/7] [===23%                      ] report26.sqlite[2/7] [===24%                      ] report26.sqlite[2/7] [====25%                     ] report26.sqlite[2/7] [====26%                     ] report26.sqlite[2/7] [====27%                     ] report26.sqlite[2/7] [====28%                     ] report26.sqlite[2/7] [=====29%                    ] report26.sqlite[2/7] [=====30%                    ] report26.sqlite[2/7] [=====31%                    ] report26.sqlite[2/7] [=====32%                    ] report26.sqlite[2/7] [======33%                   ] report26.sqlite[2/7] [======34%                   ] report26.sqlite[2/7] [======35%                   ] report26.sqlite[2/7] [=======36%                  ] report26.sqlite[2/7] [=======37%                  ] report26.sqlite[2/7] [=======38%                  ] report26.sqlite[2/7] [=======39%                  ] report26.sqlite[2/7] [========40%                 ] report26.sqlite[2/7] [========41%                 ] report26.sqlite[2/7] [========42%                 ] report26.sqlite[2/7] [=========43%                ] report26.sqlite[2/7] [=========44%                ] report26.sqlite[2/7] [=========45%                ] report26.sqlite[2/7] [=========46%                ] report26.sqlite[2/7] [==========47%               ] report26.sqlite[2/7] [==========48%               ] report26.sqlite[2/7] [==========49%               ] report26.sqlite[2/7] [===========50%              ] report26.sqlite[2/7] [===========51%              ] report26.sqlite[2/7] [===========52%              ] report26.sqlite[2/7] [===========53%              ] report26.sqlite[2/7] [============54%             ] report26.sqlite[2/7] [============55%             ] report26.sqlite[2/7] [============56%             ] report26.sqlite[2/7] [============57%             ] report26.sqlite[2/7] [=============58%            ] report26.sqlite[2/7] [=============59%            ] report26.sqlite[2/7] [=============60%            ] report26.sqlite[2/7] [==============61%           ] report26.sqlite[2/7] [==============62%           ] report26.sqlite[2/7] [==============63%           ] report26.sqlite[2/7] [==============64%           ] report26.sqlite[2/7] [===============65%          ] report26.sqlite[2/7] [===============66%          ] report26.sqlite[2/7] [===============67%          ] report26.sqlite[2/7] [================68%         ] report26.sqlite[2/7] [================69%         ] report26.sqlite[2/7] [================70%         ] report26.sqlite[2/7] [================71%         ] report26.sqlite[2/7] [=================72%        ] report26.sqlite[2/7] [=================73%        ] report26.sqlite[2/7] [=================74%        ] report26.sqlite[2/7] [==================75%       ] report26.sqlite[2/7] [==================76%       ] report26.sqlite[2/7] [==================77%       ] report26.sqlite[2/7] [==================78%       ] report26.sqlite[2/7] [===================79%      ] report26.sqlite[2/7] [===================80%      ] report26.sqlite[2/7] [===================81%      ] report26.sqlite[2/7] [===================82%      ] report26.sqlite[2/7] [====================83%     ] report26.sqlite[2/7] [====================84%     ] report26.sqlite[2/7] [====================85%     ] report26.sqlite[2/7] [=====================86%    ] report26.sqlite[2/7] [=====================87%    ] report26.sqlite[2/7] [=====================88%    ] report26.sqlite[2/7] [=====================89%    ] report26.sqlite[2/7] [======================90%   ] report26.sqlite[2/7] [======================91%   ] report26.sqlite[2/7] [======================92%   ] report26.sqlite[2/7] [=======================93%  ] report26.sqlite[2/7] [=======================94%  ] report26.sqlite[2/7] [=======================95%  ] report26.sqlite[2/7] [=======================96%  ] report26.sqlite[2/7] [========================97% ] report26.sqlite[2/7] [========================98% ] report26.sqlite[2/7] [========================99% ] report26.sqlite[2/7] [========================100%] report26.sqlite[2/7] [========================100%] report26.sqlite
+[3/7] Executing 'nvtx_sum' stats report
+[4/7] Executing 'cuda_api_sum' stats report
+
+ Time (%)  Total Time (ns)  Num Calls    Avg (ns)       Med (ns)     Min (ns)    Max (ns)     StdDev (ns)            Name         
+ --------  ---------------  ---------  -------------  -------------  ---------  -----------  -------------  ----------------------
+     78.1      280,914,750          2  140,457,375.0  140,457,375.0  5,215,985  275,698,765  191,260,207.9  cudaMalloc            
+     15.7       56,530,843         26    2,174,263.2    2,260,914.0      2,146    2,265,095      443,030.3  cudaDeviceSynchronize 
+      4.9       17,584,804          2    8,792,402.0    8,792,402.0  4,810,911   12,773,893    5,630,678.6  cudaMemcpy            
+      1.2        4,288,884         25      171,555.4        2,579.0      2,146    4,226,934      844,870.7  cudaLaunchKernel      
+      0.1          449,530          2      224,765.0      224,765.0    106,479      343,051      167,281.7  cudaFree              
+      0.0              802          1          802.0          802.0        802          802            0.0  cuModuleGetLoadingMode
+
+[5/7] Executing 'cuda_gpu_kern_sum' stats report
+
+ Time (%)  Total Time (ns)  Instances   Avg (ns)     Med (ns)    Min (ns)   Max (ns)   StdDev (ns)                        Name                       
+ --------  ---------------  ---------  -----------  -----------  ---------  ---------  -----------  -------------------------------------------------
+    100.0       56,416,537         25  2,256,661.5  2,256,481.0  2,253,761  2,260,321      1,834.3  shared_Conways(uchar4 *, uchar4 *, int, int, int)
+
+[6/7] Executing 'cuda_gpu_mem_time_sum' stats report
+
+ Time (%)  Total Time (ns)  Count    Avg (ns)      Med (ns)     Min (ns)    Max (ns)   StdDev (ns)           Operation          
+ --------  ---------------  -----  ------------  ------------  ----------  ----------  -----------  ----------------------------
+     72.9       12,623,699      1  12,623,699.0  12,623,699.0  12,623,699  12,623,699          0.0  [CUDA memcpy Device-to-Host]
+     27.1        4,695,072      1   4,695,072.0   4,695,072.0   4,695,072   4,695,072          0.0  [CUDA memcpy Host-to-Device]
+
+[7/7] Executing 'cuda_gpu_mem_size_sum' stats report
+
+ Total (MB)  Count  Avg (MB)  Med (MB)  Min (MB)  Max (MB)  StdDev (MB)           Operation          
+ ----------  -----  --------  --------  --------  --------  -----------  ----------------------------
+     53.696      1    53.696    53.696    53.696    53.696        0.000  [CUDA memcpy Device-to-Host]
+     53.696      1    53.696    53.696    53.696    53.696        0.000  [CUDA memcpy Host-to-Device]
+
+Generated:
+    /home/sreinde/ECE8780/Conways/ConwaysGame/report26.nsys-rep
+    /home/sreinde/ECE8780/Conways/ConwaysGame/report26.sqlite
