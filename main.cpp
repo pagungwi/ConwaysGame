@@ -82,7 +82,61 @@ void createRandomInitialState(uchar4 * gameboard, int rows, int cols)
         i += max_i + 2;
     }
 }
+/*
+Kernel for running Conway's Game of Life Serially for x phases/iterations if we wish to display the outcome of each phase
+ */
+void serialConways2(uchar4 *in, const int rows, const int cols, const int phases, uchar4 *gamestates)
+{
+    uchar4 * temp = (uchar4 *)malloc(rows*cols*sizeof(uchar4));
 
+    for(int p = 0; p < phases; p++) {
+       
+    
+        for(int r = 0; r < rows; r++) {
+            for(int c = 0; c < cols; c++) {
+                int count = 0;
+                // Neighbor positions
+                int top_l = r*cols+c - 1 - cols;
+                int top_m = r*cols+c - cols;
+                int top_r = r*cols+c + 1 - cols;
+                int mid_l = r*cols+c - 1;
+                int mid_r = r*cols+c + 1;
+                int bot_l = r*cols+c - 1 + cols;
+                int bot_m = r*cols+c + cols;
+                int bot_r = r*cols+c + cols + 1;
+                // Check if neighbors alive or dead, add to alive count
+                if(c != 0) // Need to check if on left wall of image
+                {
+                    if(top_l < rows*cols && top_l > -1 && in[top_l].x == 0) { count++; } // top left neighbor
+                    if(mid_l < rows*cols && mid_l > -1 && in[mid_l].x == 0) { count++; } // mid left neigbor
+                    if(bot_l < rows*cols && bot_l > -1 && in[bot_l].x == 0) { count++; } // bottom left neighbor
+                }
+                if(c != cols-1) // Need to check if on right wall of image
+                {   
+                    if(top_r < rows*cols && top_r > -1 && in[top_r].x == 0) { count++; } // top right neighbor
+                    if(mid_r < rows*cols && mid_r > -1 && in[mid_r].x == 0) { count++; } // middle right neighbor
+                    if(bot_r < rows*cols && bot_r > -1 && in[bot_r].x == 0) { count++; }// bottom right neighbor
+                }
+                if(top_m < rows*cols && top_m > -1 && in[top_m].x == 0) { count++; } // top middle neighbor
+                if(bot_m < rows*cols && bot_m > -1 && in[bot_m].x == 0) { count++; } // bottom middle neighbor
+
+                // Update temp board based on counts
+                if(in[r*cols+c].x == 0 && (count < 2 || count > 3)) {temp[r*cols+c] = make_uchar4(255,255,255,255);} // if alive, make dead
+                else if(in[r*cols+c].x == 0 && (count == 2 || count == 3)) {temp[r*cols+c] = make_uchar4(0,0,0,255);} // if alive, stay alive
+                else if(in[r*cols+c].x == 255 && (count == 3)) {temp[r*cols+c] = make_uchar4(0,0,0,255);} // if dead, make alive
+                else {temp[r*cols+c] = make_uchar4(255,255,255,255);} // if dead, stay dead
+            }
+        }
+        for(int r = 0; r < rows; r++) {
+            for(int c = 0; c < cols; c++) {
+                in[r*cols+c] = temp[r*cols+c];
+                gamestates[p * rows * cols + r * cols + c]=temp[r*cols+c];
+        }        
+        }
+        
+    }
+    free(temp);
+}
 /*
 Kernel for running Conway's Game of Life Serially for x phases/iterations
  */
@@ -131,8 +185,9 @@ void serialConways(uchar4 *in, const int rows, const int cols, const int phases)
         for(int r = 0; r < rows; r++) {
             for(int c = 0; c < cols; c++) {
                 in[r*cols+c] = temp[r*cols+c];
-            }
+        }        
         }
+        
     }
     free(temp);
 }
@@ -154,44 +209,51 @@ void serialCreateImage(uchar4 *in, const int rows, const int cols, std::string n
 int main(int argc, char const *argv[]) {
 
     int game_rows, game_cols, game_phases;
+    int flag;
 
     switch(argc){
         case 1:
             game_rows = 256;
             game_cols = 256;
             game_phases = 10;
+            flag = 0;
             break; 
         case 3:
             game_rows = atoi(argv[1]);
             game_cols = atoi(argv[2]);
             game_phases = 10;
+            flag = 0;
             break;
         case 4:
             game_rows = atoi(argv[1]);
             game_cols = atoi(argv[2]);
             game_phases = atoi(argv[3]);
+            flag = 0;
+            break;
+        case 5:
+            game_rows = atoi(argv[1]);
+            game_cols = atoi(argv[2]);
+            game_phases = atoi(argv[3]);
+            flag = atoi(argv[4]);
             break;
         default: 
-                std::cerr << "Usage ./conway <# rows> <# cols> <# of phases> \n";
+                std::cerr << "Usage ./conway <# rows> <# cols> <# of phases> \n Set 4th argument to 1 to store each phase \n";
                 exit(1);
     }
 
-    /* Questions:
-
-    Questions: What is this for?
-    i_img.create(game_rows, game_cols, CV_8UC1);
-    h_in_board = i_img.ptr<uchar4>(0); // pointer to output image
-    r_in_board = i_img.ptr<uchar4>(0); // pointer to reference serial output image
-    
-    Question: what are these pointers being used for?
-    checkCudaErrors(cudaMalloc((void**)&h_in_board, sizeof(uchar4)*numPixels));
-    checkCudaErrors(cudaMalloc((void**)&h_o_board, sizeof(uchar4)*numPixels));
-
-    Question: Why are we also passing the gameboard to the kernel?
-
-    */
-
     const size_t  numPixels = game_rows*game_cols;
+
+    // Displaying Conways Game setup
+    uchar4 *gamestates;
+    gamestates = (uchar4 *)malloc(game_phases*numPixels*sizeof(uchar4));
+
+    if(flag == 1){
+        memset(gamestates, 255, game_phases*numPixels*sizeof(uchar4));
+    } else {
+        memset(gamestates, 0, game_phases*numPixels*sizeof(uchar4));
+    }
+
+
 
     uchar4 *h_in_board, *h_o_board; // host pointers to the initial state board and board after all phases 
     uchar4 *d_in_board, *d_o_board; // device pointers to the initial state board and board after all phases
@@ -276,7 +338,11 @@ int main(int argc, char const *argv[]) {
     std::cout << "Serial Conways: ";
     start = std::chrono::system_clock::now();
     // Needs to be r_o_board because it is edited in the Conway function (maintain r_in_board)
-    serialConways(r_o_board, game_rows, game_cols, game_phases);
+    if(flag == 1){
+        serialConways2(r_o_board, game_rows, game_cols, game_phases, gamestates);
+    } else {
+        serialConways(r_o_board, game_rows, game_cols, game_phases);
+    }
     end = std::chrono::system_clock::now();
     elapsed_time = end-start;
     std::cout << elapsed_time.count() << "s\n";
@@ -287,6 +353,21 @@ int main(int argc, char const *argv[]) {
     end = std::chrono::system_clock::now();
     elapsed_time = end-start;
     std::cout << elapsed_time.count() << "s\n";
+
+    //Print Serial Conway
+    if(flag == 1){
+        for (int i = 0; i < game_phases; i++) {
+        std::string p = std::to_string(i);
+        std::string name = "SerialConway/Phase_" + p + ".bmp"; 
+
+        // Get a pointer to the start of phase i
+        uchar4* phasePtr = &gamestates[i * game_rows * game_cols];
+
+        // Create the image from this phase
+        serialCreateImage(phasePtr, game_rows, game_cols, name);
+    }
+    }
+    
 
     // Create GPU images (initial state, final state)
     serialCreateImage(h_in_board, game_rows, game_cols, infile);
@@ -303,6 +384,7 @@ int main(int argc, char const *argv[]) {
     free(h_o_board);
     free(r_in_board);
     free(r_o_board);
+    free(gamestates);
 
     return 0;
 }
