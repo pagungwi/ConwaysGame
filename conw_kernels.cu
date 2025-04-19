@@ -1,6 +1,6 @@
 #include "./kernel.h"
 
-#define BLOCK 32
+#define BLOCK 8
 #define TILE_WIDTH (BLOCK + 2*RADIUS)
 #define RADIUS 1
 
